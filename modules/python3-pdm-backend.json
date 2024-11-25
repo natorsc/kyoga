@@ -1,0 +1,14 @@
+{
+    "name": "python3-pdm-backend",
+    "buildsystem": "simple",
+    "build-commands": [
+        "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"pdm-backend\" --no-build-isolation"
+    ],
+    "sources": [
+        {
+            "type": "file",
+            "url": "https://files.pythonhosted.org/packages/78/85/60973a4f012d19b25b04276a1a48f80465df09b7243c789c4f1565bdfb87/pdm_backend-2.4.3-py3-none-any.whl",
+            "sha256": "07c7e7ae9dc7bbaf9a470e8d2cc59e987bf2897c2f27a7efbde8f1534c0ea4ee"
+        }
+    ]
+}

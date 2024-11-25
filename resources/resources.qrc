@@ -1,0 +1,9 @@
+
+<RCC>
+  <qresource prefix="icons">
+  <file alias="kyoga">icons/kyoga.png</file>
+  </qresource>
+  <qresource prefix="locales">
+    <file alias="kyoga.pt_BR.qm">locales/kyoga.pt_BR.qm</file>
+</qresource>
+</RCC>

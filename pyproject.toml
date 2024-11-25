@@ -1,0 +1,53 @@
+[project]
+name = "kyoga"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "Renato Cruz", email = "natorsc@gmail.com"},
+]
+dependencies = ["PySide6>=6.8.0.2"]
+requires-python = ">=3.12,<3.14"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project.scripts]
+kyoga = "kyoga.app:main"
+
+[dependency-groups]
+dev = [
+    "taskipy>=1.14.0",
+    "ruff>=0.8.0",
+]
+flatpak = [
+    "requirements-parser>=0.11.0",
+]
+
+[tool.ruff]
+line-length = 79
+extend-exclude = [".flatpak-builder", "flatpak-build-dir", "modules", "resources_rc.py"]
+
+[tool.ruff.lint]
+# preview = true
+select = ["I", "F", "E", "W", "PL", "PT"]
+
+[tool.ruff.format]
+# preview = true
+quote-style = "single"
+
+[tool.taskipy.tasks]
+run = "pdm run src/kyoga/app.py"
+format = "ruff check . --select I --fix && ruff format ."
+setup = "pdm run resources/setup.py"
+tr = "pdm run pyside6-linguist"
+flatpak = "flatpak-builder --force-clean flatpak-build-dir com.github.natorsc.Kyoga.json"
+flatpak-run = "flatpak-builder --run flatpak-build-dir com.github.natorsc.Kyoga.json kyoga"
+
+[tool.pdm]
+distribution = true
+[tool.pdm.scripts]
+pre_build = "resources/setup.py"
+

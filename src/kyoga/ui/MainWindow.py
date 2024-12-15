@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """."""
 
-import subprocess
+import functools
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
@@ -9,6 +9,8 @@ WEBP_DIR = 'webp'
 
 
 class MainWindow(QtWidgets.QMainWindow):
+    counter = 0
+
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent=parent)
         self.application = kwargs.get('application')
@@ -50,6 +52,7 @@ class MainWindow(QtWidgets.QMainWindow):
         vbox.addWidget(remove_images)
 
     def on_select_images_clicked(self):
+        self.list_view_model.clear()
         files, _ = QtWidgets.QFileDialog.getOpenFileNames(
             self,
             self.tr('Select images'),
@@ -60,14 +63,47 @@ class MainWindow(QtWidgets.QMainWindow):
             for file in files:
                 self.list_view_model.appendRow(QtGui.QStandardItem(f'{file}'))
 
+    def on_process_finished(
+        self, exit_code, exit_status, image, process, total
+    ):
+        if exit_code != 0:
+            # Create log.
+            print(process.readAllStandardOutput().data().decode())
+            print(process.readAllStandardError().data().decode())
+        else:
+            self.list_view_model.appendRow(
+                QtGui.QStandardItem(
+                    f'{image} - Return code = {exit_code}',
+                )
+            )
+        process.deleteLater()
+        self.counter += 1
+        message = self.tr(f'{self.counter} of {total}.')
+        self.statusBar().showMessage(message)
+        if self.counter == total:
+            self.statusBar().showMessage(message + self.tr(' Complete'))
+            self.counter = 0
+
+    def on_error_occurred(self, process_error):
+        if process_error.name == 'FailedToStart':
+            message = QtWidgets.QMessageBox(self)
+            message.setTextFormat(QtCore.Qt.TextFormat.RichText)
+            message.setText(
+                'cwebp is not installed.<br>'
+                '<a href="https://github.com/natorsc/kyoga">GitHub</a>.'
+            )
+            message.open()
+
     def on_convert_images_clicked(self):
         self.convert_images.setDisabled(True)
-        self.statusBar().showMessage(self.tr('Please wait, converting...'))
+        self.statusBar().showMessage(
+            self.tr('Please wait, converting...'),
+            2000,
+        )
 
-        cmd = ['cwebp', '-quiet']
-
+        cmd = 'cwebp -quiet'
         if self.lossless.checkState() == QtCore.Qt.CheckState.Checked:
-            cmd.insert(1, '-lossless')
+            cmd += ' -lossless'
 
         images = [
             self.list_view_model.item(index).text()
@@ -77,38 +113,27 @@ class MainWindow(QtWidgets.QMainWindow):
             self.list_view_model.clear()
             for image in images:
                 file_info = QtCore.QFileInfo(image)
-
                 output_dir = QtCore.QDir(file_info.dir().path())
                 output_dir.mkdir(WEBP_DIR)
                 output_dir.cd(WEBP_DIR)
 
                 output = output_dir.filePath(f'{file_info.baseName()}.webp')
 
-                cmd.extend((image, '-o', output))
-                try:
-                    result = subprocess.run(
-                        args=cmd,
-                        capture_output=True,
-                        text=True,
-                        check=False,
+                process = QtCore.QProcess()
+                process.finished.connect(
+                    functools.partial(
+                        self.on_process_finished,
+                        image=image,
+                        process=process,
+                        total=len(images),
                     )
-                except FileNotFoundError as e:
-                    message = QtWidgets.QMessageBox(self)
-                    message.setTextFormat(QtCore.Qt.TextFormat.RichText)
-                    message.setText(
-                        f'{e}<br>'
-                        '<a href="https://github.com/natorsc/kyoga">GitHub</a>.'
-                    )
-                    message.open()
-                else:
-                    self.list_view_model.appendRow(
-                        QtGui.QStandardItem(
-                            f'{image} - Return code = {result.returncode}',
-                        )
-                    )
-                    self.statusBar().showMessage(
-                        self.tr('Conversion completed.'),
-                    )
+                )
+                process.errorOccurred.connect(self.on_error_occurred)
+
+                if process.state() == QtCore.QProcess.NotRunning:
+                    cmd += f' "{image}" -o "{output}"'
+                    process.startCommand(cmd)
+
         else:
             self.statusBar().showMessage(self.tr('No images selected'))
         self.convert_images.setDisabled(False)
@@ -118,4 +143,4 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 if __name__ == '__main__':
-    pass
+    print('[!] run app.py [!]')
